@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FashionForge API{% endblock %}
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_products }}</div>
+        <div class="stat-label">Total Products</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.available_products }}</div>
+        <div class="stat-label">Available Products</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_orders }}</div>
+        <div class="stat-label">Total Orders</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">${{ "%.2f"|format(current_user.balance) }}</div>
+        <div class="stat-label">Your Balance</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-2">
+    <div class="card">
+        <div class="card-header">
+            <h3>Recent Products</h3>
+        </div>
+        <div class="card-body">
+            {% if recent_products %}
+            <div class="product-grid">
+                {% for product in recent_products %}
+                <div class="product-card">
+                    <div class="product-image">
+                        {% if product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.name }} {{ product.brand }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                        <i class="fas fa-tshirt" style="font-size: 3rem;"></i>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <div class="product-title">{{ product.name }} by {{ product.brand }}</div>
+                        <div class="product-price">${{ "%.2f"|format(product.price) }}</div>
+                        <div class="product-details">
+                            <span><i class="fas fa-ruler"></i> Size {{ product.size }}</span>
+                            <span><i class="fas fa-palette"></i> {{ product.color }}</span>
+                        </div>
+                        <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No products available.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Recent Orders</h3>
+        </div>
+        <div class="card-body">
+            {% if recent_orders %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Product</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>#{{ order.id }}</td>
+                        <td>{{ order.product.name }} by {{ order.product.brand }}</td>
+                        <td>${{ "%.2f"|format(order.amount) }}</td>
+                        <td>
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; 
+                                background-color: {% if order.status == 'completed' %}#10b981{% elif order.status == 'pending' %}#f59e0b{% else %}#ef4444{% endif %}; 
+                                color: white;">
+                                {{ order.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No orders yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get JWT token for API access and store in localStorage
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            // Fetch JWT token from session
+            const response = await fetch('/api/auth/session-jwt', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Store JWT token in localStorage for use in subsequent API calls
+                localStorage.setItem('jwt_token', data.access_token);
+                console.log('JWT token obtained and stored for API access');
+            } else {
+                console.warn('Failed to obtain JWT token');
+            }
+        } catch (error) {
+            console.error('Error obtaining JWT token:', error);
+        }
+    });
+    
+    // Helper function to make API calls with JWT token
+    function apiCall(url, options = {}) {
+        const token = localStorage.getItem('jwt_token');
+        
+        if (!token) {
+            console.error('No JWT token available. Please login again.');
+            window.location.href = '/login';
+            return;
+        }
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...options.headers
+        };
+        
+        return fetch(url, {
+            ...options,
+            headers: headers
+        });
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{% if my_products %}My Products{% else %}Available Products{% endif %} - FashionForge API{% endblock %}
+{% block header %}{% if my_products %}My Products{% else %}Available Products{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>{% if my_products %}My Product Inventory{% else %}Product Search{% endif %}</h3>
+    </div>
+    <div class="card-body">
+        <form id="searchForm" class="grid grid-cols-4" style="gap: 1rem; margin-bottom: 2rem;">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" name="name" class="form-control" value="{{ request.args.get('name', '') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Brand</label>
+                <input type="text" name="brand" class="form-control" value="{{ request.args.get('brand', '') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Min Price</label>
+                <input type="number" name="min_price" class="form-control" value="{{ request.args.get('min_price', 0) }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Max Price</label>
+                <input type="number" name="max_price" class="form-control" value="{{ request.args.get('max_price', 100000) }}">
+            </div>
+            <div class="form-group" style="grid-column: span 4;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search Products
+                </button>
+                {% if not my_products %}
+                <a href="{{ url_for('products') }}" class="btn btn-secondary">
+                    <i class="fas fa-refresh"></i> Clear Filters
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if products %}
+        <div class="product-grid">
+            {% for product in products %}
+            <div class="product-card">
+                <div class="product-image">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}" alt="{{ product.name }} {{ product.brand }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <i class="fas fa-tshirt" style="font-size: 3rem;"></i>
+                    {% endif %}
+                </div>
+                <div class="product-info">
+                    <div class="product-title">{{ product.name }} by {{ product.brand }}</div>
+                    <div class="product-price">${{ "%.2f"|format(product.price) }}</div>
+                    <div class="product-details">
+                        <span><i class="fas fa-ruler"></i> Size {{ product.size }}</span>
+                        <span><i class="fas fa-palette"></i> {{ product.color }}</span>
+                        <span><i class="fas fa-layer-group"></i> {{ product.material }}</span>
+                    </div>
+                    <p style="font-size: 0.875rem; color: #64748b; margin-bottom: 1rem;">{% if product.description %}{{ product.description[:100] }}...{% else %}No description available{% endif %}</p>
+                    
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Details
+                        </a>
+                        {% if not my_products and product.is_available %}
+                        <button type="button" class="btn btn-success btn-sm purchase-product-btn" data-product-id="{{ product.id }}">
+                            <i class="fas fa-shopping-cart"></i> Buy Now
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem;">
+            <i class="fas fa-tshirt" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;"></i>
+            <h3>No products found</h3>
+            <p>{% if my_products %}You haven't added any products yet.{% else %}No products match your search criteria.{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

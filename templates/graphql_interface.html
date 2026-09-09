@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GraphQL Interface - FashionForge API</title>
+    <style>
+        :root {
+            --primary: #e74c3c;
+            --dark-bg: #1e1e1e;
+            --dark-sidebar: #252526;
+            --dark-border: #444;
+            --light-text: #d4d4d4;
+            --accent-blue: #007acc;
+            --accent-yellow: #ffd700;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--dark-bg);
+            color: var(--light-text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: var(--dark-sidebar);
+            border-right: 1px solid var(--dark-border);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            padding: 20px;
+            background: var(--primary);
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .schema-section {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .schema-section h3 {
+            color: var(--accent-yellow);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--dark-border);
+            padding-bottom: 5px;
+        }
+        
+        .schema-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: #2a2d2e;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .schema-item:hover {
+            background: #37373d;
+            border-left-color: var(--accent-blue);
+        }
+        
+        .security-notes {
+            padding: 15px;
+            background: #2d2d30;
+            border-top: 1px solid var(--dark-border);
+        }
+        
+        .security-notes h4 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+        
+        .security-notes ul {
+            padding-left: 20px;
+            font-size: 0.85em;
+        }
+        
+        .security-notes li {
+            margin: 3px 0;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .toolbar {
+            padding: 10px 20px;
+            background: #2d2d30;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .button {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s;
+        }
+        
+        .button:hover {
+            background: #005a9e;
+        }
+        
+        .button.secondary {
+            background: #5a6268;
+        }
+        
+        .button.secondary:hover {
+            background: #495057;
+        }
+        
+        .editor-container {
+            flex: 1;
+            display: flex;
+        }
+        
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--dark-border);
+        }
+        
+        .panel:last-child {
+            border-right: none;
+        }
+        
+        .panel-header {
+            padding: 10px 20px;
+            background: #2d2d30;
+            border-bottom: 1px solid var(--dark-border);
+            font-weight: bold;
+            color: var(--accent-yellow);
+        }
+        
+        .panel-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: var(--dark-bg);
+            color: var(--light-text);
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: none;
+        }
+        
+        pre {
+            background: var(--dark-bg);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            height: 100%;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>GraphQL Interface</h1>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="toolbar">
+                <button class="button" onclick="executeQuery()">▶ Execute Query</button>
+                <button class="button secondary" onclick="clearQuery()">🗑 Clear Query</button>
+                <button class="button secondary" onclick="clearResponse()">🗑 Clear Response</button>
+            </div>
+            
+            <div class="editor-container">
+                <!-- Query Panel -->
+                <div class="panel">
+                    <div class="panel-header">Query Editor</div>
+                    <div class="panel-content">
+                        <textarea id="queryEditor" placeholder="Enter your GraphQL query here...">{
+  users {
+    id
+    username
+    email
+    balance
+  }
+}</textarea>
+                    </div>
+                </div>
+                
+                <!-- Response Panel -->
+                <div class="panel">
+                    <div class="panel-header">Response</div>
+                    <div class="panel-content">
+                        <pre id="response">{"data": {}}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const queryTemplates = {
+            users_basic: `{
+  users {
+    id
+    username
+    email
+    balance
+  }
+}`,
+
+            users_sensitive: `{
+  users {
+    id
+    username
+    email
+    balance
+    is_admin
+    password_hash
+  }
+}`,
+
+            products: `{
+  products {
+    id
+    name
+    brand
+    category
+    price
+    sku
+    owner {
+      id
+      username
+      email
+    }
+  }
+}`,
+
+            code_exec: `{
+  exec("print('Hello from GraphQL!')")
+}`,
+
+            filter_users: `{
+  users(where: user['balance'] > 5000 and user['is_admin'] == True) {
+    username
+    balance
+    is_admin
+  }
+}`
+        };
+
+        function loadTemplate(templateName) {
+            document.getElementById('queryEditor').value = queryTemplates[templateName];
+        }
+
+        function clearQuery() {
+            document.getElementById('queryEditor').value = '';
+        }
+
+        function clearResponse() {
+            document.getElementById('response').textContent = '{"data": {}}';
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('queryEditor').value;
+            const responseElement = document.getElementById('response');
+            
+            if (!query.trim()) {
+                responseElement.textContent = '{"error": "Query cannot be empty"}';
+                return;
+            }
+            
+            try {
+                responseElement.textContent = "Executing query...";
+                
+                const response = await fetch('/graphql/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        variables: {}
+                    })
+                });
+                
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseElement.textContent = JSON.stringify(
+                    { error: 'Request failed: ' + error.message }, 
+                    null, 2
+                );
+            }
+        }
+
+        // Allow Ctrl+Enter to execute query
+        document.getElementById('queryEditor').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                executeQuery();
+            }
+        });
+    </script>
+</body>
+</html>

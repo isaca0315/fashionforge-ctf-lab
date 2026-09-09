@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} by {{ product.brand }} - FashionForge API{% endblock %}
+{% block header %}Product Details{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2">
+    <!-- Product Image and Basic Info -->
+    <div class="card">
+        <div class="card-header">
+            <h3>{{ product.name }} by {{ product.brand }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="product-image" style="height: 300px; margin-bottom: 1.5rem;">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }} {{ product.brand }}" 
+                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem;">
+                {% else %}
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #e2e8f0; border-radius: 0.5rem;">
+                    <i class="fas fa-tshirt" style="font-size: 4rem; color: #64748b;"></i>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="product-price" style="font-size: 2rem; font-weight: 700; color: #2563eb; margin-bottom: 1rem;">
+                ${{ "%.2f"|format(product.price) }}
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <span style="padding: 0.5rem 1rem; background: #f1f5f9; border-radius: 0.5rem; font-size: 0.875rem;">
+                    <i class="fas fa-ruler"></i> Size {{ product.size }}
+                </span>
+                <span style="padding: 0.5rem 1rem; background: #f1f5f9; border-radius: 0.5rem; font-size: 0.875rem;">
+                    <i class="fas fa-palette"></i> {{ product.color }}
+                </span>
+                <span style="padding: 0.5rem 1rem; background: #f1f5f9; border-radius: 0.5rem; font-size: 0.875rem;">
+                    <i class="fas fa-layer-group"></i> {{ product.material }}
+                </span>
+            </div>
+            
+            {% if product.is_available and product.owner_id != current_user.id %}
+            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                <h4 style="margin-top: 0; margin-bottom: 1rem;">Purchase Options</h4>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label for="discountCode" style="font-size: 0.875rem; min-width: 9rem;">Discount Code:</label>
+                        <input type="text" id="discountCode" class="form-control" placeholder="e.g. SAVE10" style="width: 100%;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label for="priceOverride" style="font-size: 0.875rem; min-width: 9rem;">Price Override:</label>
+                        <input type="number" id="priceOverride" step="0.01" class="form-control" placeholder="Enter your own price" style="width: 100%;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label for="specialOffer" style="font-size: 0.875rem; min-width: 9rem;">Special Offer:</label>
+                        <input type="checkbox" id="specialOffer">
+                    </div>
+                </div>
+                
+                <button onclick="purchaseProduct({{ product.id }})" class="btn btn-success" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 600;">
+                    <i class="fas fa-shopping-cart"></i> Purchase Product
+                </button>
+                
+                <div id="priceCalculation" style="margin-top: 1rem; padding: 0.75rem; background: #ffffff; border-radius: 0.375rem; border: 1px solid #e2e8f0; font-size: 0.875rem;">
+                    <div>Original Price: <span id="originalPrice">${{ "%.2f"|format(product.price) }}</span></div>
+                    <div id="discountRow" style="display: none;">Discount Applied: <span id="discountAmount">$0.00</span></div>
+                    <div style="font-weight: 600; color: #2563eb; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e2e8f0;">
+                        Final Price: <span id="finalPrice">${{ "%.2f"|format(product.price) }}</span>
+                    </div>
+                </div>
+            </div>
+            {% elif not product.is_available %}
+            <div style="padding: 1rem; background: #fef3c7; border: 1px solid #fde68a; border-radius: 0.5rem; text-align: center;">
+                <i class="fas fa-exclamation-triangle"></i> This product is no longer available
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Product Details and Specifications -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Specifications</h3>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-cols-2" style="gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <strong>Name:</strong> {{ product.name }}
+                </div>
+                <div>
+                    <strong>Brand:</strong> {{ product.brand }}
+                </div>
+                <div>
+                    <strong>Category:</strong> {{ product.category }}
+                </div>
+                <div>
+                    <strong>Color:</strong> {{ product.color }}
+                </div>
+                <div>
+                    <strong>Material:</strong> {{ product.material }}
+                </div>
+                <div>
+                    <strong>Size:</strong> {{ product.size }}
+                </div>
+                <div>
+                    <strong>SKU:</strong> <code>{{ product.sku }}</code>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <strong>Description:</strong>
+                <p style="margin-top: 0.5rem; color: #64748b;">{{ product.description or 'No description available.' }}</p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f8fafc; border-radius: 0.5rem;">
+                <strong>Seller Information:</strong>
+                <p style="margin: 0.5rem 0 0 0; color: #64748b;">
+                    Listed by: {{ product.owner.first_name }} {{ product.owner.last_name }}<br>
+                    Contact: {{ product.owner.email }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Upload Section (for product owners) -->
+{% if product.owner_id == current_user.id %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-upload"></i> Upload Product Images</h3>
+    </div>
+    <div class="card-body">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">Select Image File</label>
+                <input type="file" id="fileInput" name="file" class="form-control" accept="image/*">
+            </div>
+            
+            <div id="imagePreview" style="margin-bottom: 1rem;"></div>
+            
+            <button type="button" onclick="uploadProductImage({{ product.id }})" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Upload Image
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Related Products -->
+<div class="card">
+    <div class="card-header">
+        <h3>Similar Products</h3>
+    </div>
+    <div class="card-body">
+        <div style="text-align: center; padding: 2rem; color: #64748b;">
+            <i class="fas fa-tshirt" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+            <p>Similar products would be displayed here based on category, brand, and price range.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function purchaseProduct(productId) {
+    if (!confirm('Are you sure you want to purchase this product for ${{ "%.2f"|format(product.price) }}?')) {
+        return;
+    }
+    
+    const discountCode = document.getElementById('discountCode').value;
+    const specialOffer = document.getElementById('specialOffer').checked;
+    const priceOverride = document.getElementById('priceOverride').value;
+    
+    // Create the JSON data with vulnerability parameters
+    const purchaseData = {
+        product_id: parseInt(productId),
+        amount: parseFloat({{ product.price }}),
+        name: "{{ product.name }}",
+        brand: "{{ product.brand }}",
+        price: parseFloat({{ product.price }}),
+        purchase_date: new Date().toISOString(),
+        payment_method: "web_checkout"
+    };
+    
+    // Add vulnerability parameters
+    if (priceOverride) {
+        purchaseData.price_override = parseFloat(priceOverride);
+    }
+    
+    if (discountCode) {
+        purchaseData.discount_code = discountCode;
+    }
+    
+    if (specialOffer) {
+        purchaseData.special_offer = true;
+    }
+    
+    console.log('Sending purchase request:', purchaseData);
+    
+    fetch(`/api/products/${productId}/purchase`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(purchaseData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const vulnMsg = data.vulnerability_exploited ? ' [VULNERABILITY EXPLOITED!]' : '';
+            const message = `Product purchased successfully!${vulnMsg}\nActual Price: $${data.actual_price.toFixed(2)}\nPaid Amount: $${data.paid_amount.toFixed(2)}\nSavings: $${data.discount_applied.toFixed(2)}\nRedirecting to orders...`;
+            alert(message);
+            setTimeout(() => {
+                window.location.href = '/orders';
+            }, 2000);
+        } else {
+            showAlert('Purchase failed: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('An error occurred during purchase: ' + error.message, 'danger');
+    });
+}
+</script>
+{% endblock %}

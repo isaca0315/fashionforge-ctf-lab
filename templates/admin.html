@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - FashionForge API{% endblock %}
+{% block header %}Admin Panel{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-3 stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_users }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_products }}</div>
+        <div class="stat-label">Total Products</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.available_products }}</div>
+        <div class="stat-label">Available Products</div>
+    </div>
+</div>
+
+<!-- Security Vulnerability Demo Section -->
+<div class="grid grid-cols-2">
+    <!-- IDOR Vulnerability Demo -->
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h3><i class="fas fa-shield-alt"></i> Transfer Ownership</h3>
+        </div>
+        <div class="card-body">
+            <form id="transferOwnershipForm">
+                <div class="form-group">
+                    <label for="productId"><strong>Product ID:</strong></label>
+                    <input type="number" class="form-control" id="productId" placeholder="Enter product ID" required>
+                    <small class="form-text text-muted">Any product ID in the system</small>
+                </div>
+                <div class="form-group">
+                    <label for="newOwnerUsername"><strong>New Owner Username:</strong></label>
+                    <input type="text" class="form-control" id="newOwnerUsername" placeholder="Enter new owner username" required>
+                    <small class="form-text text-muted">Any username in the system</small>
+                </div>
+                <button type="submit" class="btn btn-danger btn-block">
+                    <i class="fas fa-exchange-alt"></i> Transfer Ownership 
+                </button>
+            </form>
+            <div id="transferResult" class="mt-3" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- BOLA Vulnerability Demo -->
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h3><i class="fas fa-exclamation-triangle"></i> Status Update </h3>
+        </div>
+        <div class="card-body">
+            <form id="updateOrderStatusForm">
+                <div class="form-group">
+                    <label for="orderId"><strong>Order ID:</strong></label>
+                    <input type="number" class="form-control" id="orderId" placeholder="Enter any order ID" required>
+                    <small class="form-text text-muted">Any order ID in the system</small>
+                </div>
+                <div class="form-group">
+                    <label for="newStatus"><strong>New Status:</strong></label>
+                    <select class="form-control" id="newStatus" required>
+                        <option value="pending">🟡 Pending</option>
+                        <option value="completed">🟢 Completed</option>
+                        <option value="refunded">🟠 Refunded</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-warning btn-block">
+                    <i class="fas fa-edit"></i> Update Order Status
+                </button>
+            </form>
+            <div id="statusUpdateResult" class="mt-3" style="display: none;"></div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Broken Function Level Authorization Demo -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h3><i class="fas fa-user-shield"></i> Promote To Admin <h3>
+    </div>
+    <div class="card-body">
+        
+        <form id="promoteUserForm" class="form-inline">
+            <div class="form-group mr-2">
+                <label for="username" class="mr-2"><strong>Username to Promote:</strong></label>
+                <input type="text" class="form-control" id="username" placeholder="Username" required>
+            </div>
+            <button type="submit" class="btn btn-info">
+                <i class="fas fa-user-plus"></i> Promote to Admin
+            </button>
+        </form>
+        <div id="promoteResult" class="mt-3" style="display: none;"></div>
+    </div>
+</div>
+
+<script>
+// Order Status Update (BOLA)
+function updateOrderStatus(orderId, status) {
+    fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        showAlert(`Order ${orderId} status updated to ${status}`, 'success');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to update order status', 'danger');
+    });
+}
+
+// IDOR - Product Ownership Transfer
+document.getElementById('transferOwnershipForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const productId = document.getElementById('productId').value;
+    const newOwnerUsername = document.getElementById('newOwnerUsername').value;
+    const resultDiv = document.getElementById('transferResult');
+
+    fetch(`/api/products/${productId}/transfer-ownership`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: newOwnerUsername
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✅  Success!</strong> ${data.message}<br>
+                    Product ID: ${data.product_id}<br>
+                    New Owner Username: ${data.new_owner_username}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>❌  Error!</strong> ${data.error || 'Unknown error occurred'}
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+        setTimeout(() => location.reload(), 2000);
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>❌  Request Failed!</strong> ${error}
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    });
+});
+
+// BOLA - Order Status Update Form
+document.getElementById('updateOrderStatusForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const orderId = document.getElementById('orderId').value;
+    const newStatus = document.getElementById('newStatus').value;
+    const resultDiv = document.getElementById('statusUpdateResult');
+    
+    fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✅  Success!</strong> ${data.message}<br>
+                    Order #${orderId} status changed to: <strong>${newStatus}</strong>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>❌  Error!</strong> ${data.error || 'Failed to update order status'}
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+        setTimeout(() => location.reload(), 2000);
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>❌  Request Failed!</strong> ${error}
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    });
+});
+
+// BFLA - Promote User to Admin
+document.getElementById('promoteUserForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const resultDiv = document.getElementById('promoteResult');
+
+    fetch('/api/admin/promote', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✅  Success!</strong> ${data.message}<br>
+                    Username: ${username} promoted to admin
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>❌  Error!</strong> ${data.error || 'Failed to promote user'}
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+        setTimeout(() => location.reload(), 2000);
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>❌  Request Failed!</strong> ${error}
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    });
+});
+
+// Quick action buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Quick promote buttons
+    document.querySelectorAll('.quick-promote').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            document.getElementById('userId').value = userId;
+        });
+    });
+    
+    // Quick owner buttons
+    document.querySelectorAll('.quick-owner').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            document.getElementById('newOwnerId').value = userId;
+        });
+    });
+    
+    // Quick order buttons
+    document.querySelectorAll('.quick-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            document.getElementById('orderId').value = orderId;
+            document.getElementById('newStatus').value = 'cancelled';
+        });
+    });
+    
+    // Quick transfer buttons
+    document.querySelectorAll('.quick-transfer').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            document.getElementById('productId').value = productId;
+        });
+    });
+});
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+    `;
+    document.body.prepend(alertDiv);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+</script>
+
+<style>
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.badge-success { background-color: #10b981; color: white; }
+.badge-danger { background-color: #ef4444; color: white; }
+.badge-secondary { background-color: #64748b; color: white; }
+.card-header.bg-danger { border-bottom: 3px solid #dc3545; }
+.card-header.bg-warning { border-bottom: 3px solid #ffc107; }
+.card-header.bg-info { border-bottom: 3px solid #17a2b8; }
+.quick-promote, .quick-owner, .quick-order, .quick-transfer {
+    font-size: 0.7em;
+    padding: 0.15em 0.4em;
+    margin: 0.1em;
+}
+</style>
+{% endblock %}

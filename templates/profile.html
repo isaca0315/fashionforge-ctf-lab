@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - FashionForge API{% endblock %}
+{% block header %}My Profile{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2">
+    <!-- Profile Information -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-user"></i> Personal Information</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/api/profile/update">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                    <small class="form-text" style="color: #64748b;">Username cannot be changed</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+                </div>
+                
+                <div class="grid grid-cols-2" style="gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" name="first_name" class="form-control" value="{{ current_user.first_name or '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" name="last_name" class="form-control" value="{{ current_user.last_name or '' }}">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" name="phone" class="form-control" value="{{ current_user.phone or '' }}">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Update Profile
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Account Security -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-shield-alt"></i> Account Security</h3>
+        </div>
+        <div class="card-body">
+            <div style="padding: 1rem; background: #f0f9ff; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb; text-align: center;">
+                    ${{ "%.2f"|format(current_user.balance) }}
+                </div>
+                <div style="text-align: center; color: #64748b; font-size: 0.875rem;">Account Balance</div>
+            </div>
+
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" id="currentPassword" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" id="newPassword" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="form-control" required>
+                </div>
+                
+                <button type="button" onclick="changePassword()" class="btn btn-primary">
+                    <i class="fas fa-key"></i> Change Password
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showAlert('New passwords do not match', 'danger');
+        return;
+    }
+    
+    // In a real app, this would call an API endpoint
+    showAlert('Password change functionality would be implemented here', 'info');
+}
+
+function testDataExposure(userId) {
+    fetch(`/api/users/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultDiv = document.getElementById('dataExposureResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            
+            showAlert(`Retrieved sensitive data for user ${userId}`, 'warning');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Failed to retrieve user data', 'danger');
+        });
+}
+</script>
+{% endblock %}

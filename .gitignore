@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Estado del laboratorio (se regenera al levantar / resetear)
+instance/*.db
+instance/*.sqlite*
+instance/*.sqlite3
+!instance/.gitkeep
+uploads/*
+!uploads/.gitkeep
+session_data/*
+!session_data/.gitkeep
+
+# Entorno y secretos
+.env
+*.env
+.env.*
+!.env.example
+
+# Sistema
+.DS_Store
+Thumbs.db

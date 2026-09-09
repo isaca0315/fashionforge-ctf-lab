@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - FashionForge API{% endblock %}
+
+{% block auth_content %}
+<div class="login-container">
+    <div class="login-card" style="max-width: 500px;">
+        <div class="login-header">
+            <h1><i class="fas fa-tshirt"></i> FashionForge</h1>
+            <p>Modern Fashion Marketplace with API</p>
+        </div>
+        
+        <div style="text-align: center; margin: 2rem 0;">
+            <a href="{{ url_for('login') }}" class="btn btn-primary" style="padding: 1rem 2rem; margin-right: 1rem;">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </a>
+            <a href="{{ url_for('register') }}" class="btn btn-secondary" style="padding: 1rem 2rem;">
+                <i class="fas fa-user-plus"></i> Register
+            </a>
+            
+        </div>
+
+        <!-- Features -->
+        <div style="margin: 2rem 0;">
+            <h3 style="text-align: center; margin-bottom: 1rem;">Features</h3>
+            <div class="grid grid-cols-2" style="gap: 1rem;">
+                <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 0.5rem;">
+                    <i class="fas fa-tshirt" style="font-size: 2rem; color: #2563eb; margin-bottom: 0.5rem;"></i>
+                    <div>Product Catalog</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 0.5rem;">
+                    <i class="fas fa-credit-card" style="font-size: 2rem; color: #2563eb; margin-bottom: 0.5rem;"></i>
+                    <div>Secure Payments</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 0.5rem;">
+                    <i class="fas fa-robot" style="font-size: 2rem; color: #2563eb; margin-bottom: 0.5rem;"></i>
+                    <div>AI Integration</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 0.5rem;">
+                    <i class="fas fa-shield-alt" style="font-size: 2rem; color: #2563eb; margin-bottom: 0.5rem;"></i>
+                    <div>API Security</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

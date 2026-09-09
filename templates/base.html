@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FashionForge API{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-tshirt"></i> FashionForge</h2>
+            </div>
+            
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Main</h3>
+                    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('products') }}" class="nav-link {% if request.endpoint == 'products' %}active{% endif %}">
+                        <i class="fas fa-tshirt"></i> Products
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>Transactions</h3>
+                    <a href="{{ url_for('orders') }}" class="nav-link {% if request.endpoint == 'orders' %}active{% endif %}">
+                        <i class="fas fa-shopping-cart"></i> Orders
+                    </a>
+                    <a href="{{ url_for('payments') }}" class="nav-link {% if request.endpoint == 'payments' %}active{% endif %}">
+                        <i class="fas fa-credit-card"></i> Payments
+                    </a>
+                    <a href="{{ url_for('payments') }}" class="nav-link {% if request.endpoint == 'payments' %}active{% endif %}">
+                        <i class="fas fa-credit-card"></i> Insurance
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>Tools</h3>
+                    <a href="{{ url_for('upload_file') }}" class="nav-link {% if request.endpoint == 'upload_file' %}active{% endif %}">
+                        <i class="fas fa-upload"></i> File Upload
+                    </a>
+                    <a href="{{ url_for('ai_tools') }}" class="nav-link {% if request.endpoint == 'ai_tools' %}active{% endif %}">
+                        <i class="fas fa-robot"></i> Tools
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>Account</h3>
+                    <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+                        <i class="fas fa-user"></i> Profile
+                    </a>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin') }}" class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}">
+                        <i class="fas fa-cog"></i> Admin
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="nav-link">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <button class="mobile-menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>{% block header %}Dashboard{% endblock %}</h1>
+                <div class="user-menu">
+                    <span>Welcome, {{ current_user.first_name or current_user.username }}</span>
+                    <div class="balance">${{ "%.2f"|format(current_user.balance) }}</div>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+        {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <script>
+        // Auto-fetch JWT token for authenticated users
+        if (document.body.innerHTML.includes('app-container')) {
+            document.addEventListener('DOMContentLoaded', async function() {
+                try {
+                    // Check if token already exists
+                    if (!localStorage.getItem('jwt_token')) {
+                        // Fetch JWT token from session
+                        const response = await fetch('/api/auth/session-jwt', {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            // Store JWT token in localStorage for use in API calls
+                            localStorage.setItem('jwt_token', data.access_token);
+                            localStorage.setItem('jwt_username', data.username);
+                            console.log('JWT token stored for user:', data.username);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error obtaining JWT token:', error);
+                }
+            });
+        }
+        
+        // Function to get JWT token for API calls
+        function getJWTToken() {
+            const token = localStorage.getItem('jwt_token');
+            if (!token) {
+                console.warn('JWT token not available. Please refresh the page.');
+                return null;
+            }
+            return token;
+        }
+        
+        // Function to make authenticated API calls with JWT
+        function apiCallWithJWT(url, options = {}) {
+            const token = getJWTToken();
+            
+            if (!token) {
+                console.error('JWT token required but not available');
+                return Promise.reject('No JWT token available');
+            }
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            
+            return fetch(url, {
+                ...options,
+                headers: headers
+            });
+        }
+    </script>
+</body>
+</html>

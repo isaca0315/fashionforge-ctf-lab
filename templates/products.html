@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Available Products</h1>
+    
+    {% if my_products %}
+    <p><a href="/products" class="btn btn-secondary">View All Products</a></p>
+    <h2>My Products</h2>
+    {% endif %}
+    
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }} {{ product.brand }}">
+                {% else %}
+                <div class="card-img-top bg-secondary" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                    <span class="text-white">No Image</span>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }} by {{ product.brand }}</h5>
+                    <p class="card-text">
+                        <strong>Price:</strong> ${{ product.price }}<br>
+                        <strong>Size:</strong> {{ product.size }}<br>
+                        <strong>Color:</strong> {{ product.color }}<br>
+                        <strong>Category:</strong> {{ product.category }}<br>
+                        <strong>Material:</strong> {{ product.material }}
+                    </p>
+                    <p class="card-text">{{ product.description }}</p>
+                    <a href="/product/{{ product.id }}" class="btn btn-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not products %}
+    <p>No products found.</p>
+    {% endif %}
+</div>
+{% endblock %}

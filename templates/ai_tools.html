@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}AI Tools{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>AI Tools</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header"><h5>AI Chat Bot</h5></div>
+                <div class="card-body">
+                    <form id="aiChatForm">
+                        <div class="mb-3">
+                            <label for="aiPrompt" class="form-label">Your message to the AI bot</label>
+                            <textarea class="form-control" id="aiPrompt" name="aiPrompt" rows="3" placeholder="Ask me anything about the FashionForge API..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                    <div id="aiChatResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>User Search</h5></div>
+                <div class="card-body">
+                    <form id="userSearchForm">
+                        <div class="mb-3">
+                            <label for="searchQ" class="form-label">Username Pattern</label>
+                            <input type="text" class="form-control" id="searchQ" placeholder="Enter username" />
+                        </div>
+                        <button class="btn btn-warning" type="submit">Search Users</button>
+                    </form>
+                    <pre id="userSearchResult" class="mt-3"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>User Filter</h5></div>
+                <div class="card-body">
+                    <form id="userFilterForm">
+                        <div class="mb-3">
+                            <label for="filterExpr" class="form-label">Filter Expression</label>
+                            <input type="text" class="form-control" id="filterExpr" />
+                        </div>
+                        <button class="btn btn-warning" type="submit">Filter Users</button>
+                    </form>
+                    <pre id="userFilterResult" class="mt-3"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>Network Tools</h5></div>
+                <div class="card-body">
+                    <form id="fetchForm" class="mb-3">
+                        <div class="mb-2">
+                            <label for="fetchUrl" class="form-label">URL to Fetch</label>
+                            <input type="text" id="fetchUrl" class="form-control"  />
+                        </div>
+                        <button class="btn btn-danger" type="submit">Fetch URL</button>
+                    </form>
+                    <pre id="networkResult" class="mt-3"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>SKU Lookup</h5></div>
+                <div class="card-body">
+                    <form id="skuLookupForm">
+                        <div class="mb-2">
+                            <label for="skuInput" class="form-label">SKU for Lookup</label>
+                            <input type="text" id="skuInput" class="form-control" placeholder="e.g. SKU-TEE-001 or any command" />
+                        </div>
+                        <button class="btn btn-danger" type="submit">Lookup SKU</button>
+                    </form>
+                    <pre id="skuLookupResult" class="mt-3"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header"><h5>Product Stream</h5></div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label for="streamCount" class="form-label">Count</label>
+                        <input type="number" id="streamCount" class="form-control" value="10" />
+                    </div>
+                    <button id="startStreamBtn" class="btn btn-secondary">Start Stream</button>
+                    <button id="stopStreamBtn" class="btn btn-secondary">Stop Stream</button>
+                    <pre id="streamOutput" class="mt-3"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// AI Chat Bot
+document.getElementById('aiChatForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const prompt = document.getElementById('aiPrompt').value;
+    const response = await fetch('/api/ai/chatbot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: 'AIChatBot',
+            year: 2025,
+            price: 0,
+            user_instructions: prompt
+        })
+    });
+    const data = await response.json();
+    const resultDiv = document.getElementById('aiChatResult');
+    if (data.description) {
+        resultDiv.innerHTML = `<div class="alert alert-success"><strong>AI Bot:</strong><br>${data.description}</div>`;
+    } else {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error || 'Unknown error'}</div>`;
+    }
+});
+
+// User search
+document.getElementById('userSearchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = document.getElementById('searchQ').value;
+    const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    document.getElementById('userSearchResult').textContent = JSON.stringify(data, null, 2);
+});
+
+// User filter
+document.getElementById('userFilterForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const filter = document.getElementById('filterExpr').value;
+    const res = await fetch('/api/users/filter', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({filter}) 
+    });
+    const data = await res.json();
+    document.getElementById('userFilterResult').textContent = JSON.stringify(data, null, 2);
+});
+
+// Fetch URL (SSRF)
+document.getElementById('fetchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = document.getElementById('fetchUrl').value;
+    const res = await fetch('/api/network/fetch', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({url}) 
+    });
+    const data = await res.json();
+    document.getElementById('networkResult').textContent = JSON.stringify(data, null, 2);
+});
+
+// SKU Lookup (Command Injection)
+document.getElementById('skuLookupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const sku = document.getElementById('skuInput').value;
+    const res = await fetch('/api/automobile/sku-lookup', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({sku}) 
+    });
+    const data = await res.json();
+    document.getElementById('skuLookupResult').textContent = JSON.stringify(data, null, 2);
+});
+
+// Product stream
+let eventSource = null;
+document.getElementById('startStreamBtn').addEventListener('click', () => {
+    const count = document.getElementById('streamCount').value || 1000;
+    const out = document.getElementById('streamOutput');
+    out.textContent = '';
+    // Use EventSource for server-sent events
+    eventSource = new EventSource(`/api/stream/product-feed?count=${encodeURIComponent(count)}`);
+    eventSource.onmessage = function(e) {
+        out.textContent += e.data + '\n';
+    };
+    eventSource.onerror = function(e) {
+        out.textContent += 'Stream error\n';
+        eventSource.close();
+    };
+});
+document.getElementById('stopStreamBtn').addEventListener('click', () => {
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
+});
+
+</script>
+{% endblock %}

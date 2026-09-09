@@ -1,0 +1,52 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-server
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+      - SECRET_KEY=your-very-strong-secret-key-here
+      - OAUTH2_CLIENT_SECRET=your-strong-client-secret-here
+    volumes:
+      - ./app.py:/app/app.py
+      - ./config.py:/app/config.py
+      - ./models.py:/app/models.py
+      - ./jwt_utils.py:/app/jwt_utils.py
+      - ./jwt_custom.py:/app/jwt_custom.py
+      - ./templates:/app/templates
+      - ./static:/app/static
+      - ./uploads:/app/uploads
+      - ./instance:/app/instance
+      - ./graphql_vuln.py:/app/graphql_vuln.py
+      - ./session_data:/tmp/flask_session  
+    networks:
+      - api-network
+    restart: unless-stopped
+
+  oauth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oauth-server
+    ports:
+      - "5001:5001"
+    environment:
+      - SECRET_KEY=your-oauth-server-secret-key
+    command: ["python3", "oauth_server.py"]
+    volumes:
+      - ./oauth_server.py:/app/oauth_server.py
+      - ./templates_oauth:/app/templates_oauth
+      - ./instance:/app/instance
+    networks:
+      - api-network
+    restart: unless-stopped
+    depends_on:
+      - api
+
+networks:
+  api-network:
+    driver: bridge

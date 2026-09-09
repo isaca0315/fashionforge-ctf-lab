@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Register - FashionForge API{% endblock %}
+
+{% block auth_content %}
+<div class="login-container">
+    <div class="login-card" style="max-width: 500px;">
+        <div class="login-header">
+            <h1><i class="fas fa-tshirt"></i> FashionForge</h1>
+            <p>Create your account</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="grid grid-cols-2" style="gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" name="first_name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" name="last_name" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 1rem;">
+            <p>Already have an account? <a href="{{ url_for('login') }}">Sign in here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
