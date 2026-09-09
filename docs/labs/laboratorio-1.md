@@ -52,7 +52,7 @@ Alertas de salud: `api-server` debe quedar healthy; `oauth-server` puede quedar 
      .value | keys[] | select(. $value=="security") | empty
    ' 2>/dev/null
    ```
-3. Busca en el spec los tags `Automobile` (endpoints renombrados), `Admin`, `Debug`, `Network`.
+3. Busca en el spec los tags `FashionForge`, `Admin`, `Debug`, `Network` (áreas de interés para el pentest).
 
 **Prueba de éxito**: `/apispec.json` devuelve JSON con `paths.*` (42 paths en el lab). Respuesta con elemento `"title": "FashionForge API"`.
 

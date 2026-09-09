@@ -175,7 +175,7 @@ document.getElementById('fetchForm').addEventListener('submit', async (e) => {
 document.getElementById('skuLookupForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const sku = document.getElementById('skuInput').value;
-    const res = await fetch('/api/automobile/sku-lookup', { 
+    const res = await fetch('/api/inventory/sku-lookup', { 
         method: 'POST', 
         headers: {'Content-Type':'application/json'}, 
         body: JSON.stringify({sku}) 

@@ -3304,9 +3304,9 @@ def users_filter_nosql_like():
     return jsonify(results)
 
 # Command Injection: SKU lookup (unsafe)
-@app.route('/api/automobile/sku-lookup', methods=['POST'])
+@app.route('/api/inventory/sku-lookup', methods=['POST'])
 @jwt_required_custom
-def automobile_sku_lookup():
+def inventory_sku_lookup():
     """
     SKU lookup (unsafe command execution demo)
     ---

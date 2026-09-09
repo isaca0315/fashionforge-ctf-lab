@@ -371,4 +371,4 @@ def handle_user_filtering(query):
 
 def handle_source_code_discovery(query):
     """Handle source code discovery attempts"""
-    return {'source_discovery': 'The GraphQL resolver is vulnerable. Apps in scope: Fashion API'}
+    return {'source_discovery': 'The GraphQL resolver is vulnerable. Apps in scope: FashionForge'}
