@@ -3,7 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: api-server
+    image: lab-api:latest
+    container_name: lab-api-server
     ports:
       - "5000:5000"
     environment:
@@ -24,14 +25,15 @@ services:
       - ./graphql_vuln.py:/app/graphql_vuln.py
       - ./session_data:/tmp/flask_session  
     networks:
-      - api-network
+      - lab-network
     restart: unless-stopped
 
   oauth:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: oauth-server
+    image: lab-oauth:latest
+    container_name: lab-oauth-server
     ports:
       - "5001:5001"
     environment:
@@ -42,11 +44,11 @@ services:
       - ./templates_oauth:/app/templates_oauth
       - ./instance:/app/instance
     networks:
-      - api-network
+      - lab-network
     restart: unless-stopped
     depends_on:
       - api
 
 networks:
-  api-network:
+  lab-network:
     driver: bridge

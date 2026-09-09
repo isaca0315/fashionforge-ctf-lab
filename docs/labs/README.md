@@ -10,12 +10,12 @@ Laboratorio **red team** de seguridad de APIs basado en **FashionForge**, una pl
 
 | Servicio | URL | Región |
 |---|---|---|
-| **API principal (FashionForge)** | `http://localhost:5000` | `api-server` (Docker) |
-| **Servidor OAuth/OIDC** | `http://localhost:5001` | `oauth-server` (Docker) |
+| **API principal (FashionForge)** | `http://localhost:5000` | `lab-api-server` (Docker) |
+| **Servidor OAuth/OIDC** | `http://localhost:5001` | `lab-oauth-server` (Docker) |
 | **GraphQL endpoint** | `POST /graphql/query` | dentro de la API |
 | **Swagger / OpenAPI** | `http://localhost:5000/api/docs` | documentación de superficie |
 
-**Recurso**: `fashion.db` (SQLite, compartida entre `api-server` y `oauth-server`).
+**Recurso**: `fashion.db` (SQLite, compartida entre `lab-api-server` y `lab-oauth-server`).
 
 ### Cuentas seed (credenciales por defecto = fuga API2)
 
@@ -148,7 +148,7 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 
 | # | Explotación | Ubicación |
 |---|---|---|
-| 1 | `debug=True` → debugger interactivo Werkzeug | `app.py` (`__main__`) |
+| 1 | `debug=True` → debugger interactivo Werkzeug (**solo** al ejecutar `python app.py` directamente; con docker-compose/gunicorn y `FLASK_ENV=production` el debug está apagado) | `app.py` (`__main__`) |
 | 2 | Secret keys hardcodeadas (app, JWT fallback, OAuth, session) | `config.py`, `app.py`, `jwt_utils.py`, `oauth_server.py` |
 | 3 | Cookies sin `Secure`, `jwt_token` sin `HttpOnly` | login/callback |
 | 4 | Swagger/OpenAPI completo sin auth | `GET /api/docs` |
@@ -259,3 +259,51 @@ Los retos R01, R02, R03, R06, R07, R08, R20, R22, R24, R25 y R26 conservan su n�
 | `docs/labs/laboratorio-2.md` | Laboratorio 2 — Autorización (BOLA/Mass Assignment/BFLA) |
 | `docs/labs/laboratorio-3.md` | Laboratorio 3 — Inyecciones y RCE |
 | `docs/labs/laboratorio-4.md` | Laboratorio 4 — Lógica de negocio, OAuth y Prompt injection |
+
+---
+
+## 7. Anexo: Uso de **Burp Suite Community Edition** (versión web del lab)
+
+> Los comandos `curl` de las guías siguen siendo el "camino canónico" (fáciles de scriptear y verificables). Esta sección explica la **misma explotación con Burp Suite Community Edition (BSaC)** — el 90% de los retos son flujos web/HTTP, así que Burp los cubre casi todos *sin escribir código*.
+
+### 7.1 Puesta a punto (una vez por sesión)
+
+1. **Arranca Burp** → pestaña `Proxy` → pestaña `Proxy settings` → activa el listener por defecto (`127.0.0.1:8080`).
+2. **Apunta el navegador** al proxy `127.0.0.1:8080` (mo de preferencias del navegador, o una extensión como FoxyProxy).
+3. **TLS**: el lab es **HTTP plano** (no necesitas importar el certificado CA de Burp). Si algún día lo provisionas con HTTPS, instala el certificado en `http://burp` → `CA Certificate`.
+4. Se abren las ventanas; las 3 que usarás:
+   - **Proxy → HTTP history**: registra *todas* las peticiones del navegador. Doble clic en una → se abre en Repeater (menú contextual → `Send to Repeater`).
+   - **Repeater**: reenvía/edita una petición a mano (cambia URL, headers, body JSON, cookies) y verás la respuesta cruda. Es "el curl con punteros".
+   - **Intruder**: repite la misma petición variando posiciones (indicadas con `§`) para fuerza bruta/enumeración. **En Community Edition va limitado a ~1 petición/segundo** — suficiente para estos retos, solo más lento.
+
+### 7.2 Receta rápida por tipo de reto (ASD)
+
+| Tipo de reto | Cómo atacarlo con BSaC |
+|---|---|
+| Enumeración API / ver rutas | `Proxy → HTTP history`: navega a `/api/docs` y a `/apispec.json`, filtra por host `localhost:5000` y ordena por método/URL. Exportar el spec y filtrar tags marca la superficie. |
+| Auth / credenciales por defecto | `Repeater`: captura `POST /api/auth/login` y edita el body JSON. Para fuerza bruta: `Intruder` con 2 posiciones (`username=§admin§&password=§foo§`) y diccionario minúsculo (`admin123`, `password123`, `super123`, ...). |
+| BOLA / IDOR (IDs secuenciales) | `Repeater`: cambia el `{id}` de la URL/body (p. ej. `/api/orders/1/details` → orden de otro usuario). Con IDs 1..N recorre fácilmente. |
+| Mass assignment / BFLA | `Repeater`: edita el body JSON añadiendo campos (`"is_admin": true`, `"balance": 999`) o a un endpoint de admin PÚBLICO sin token. |
+| SQLi / Command injection / GraphQL | `Repeater`: pega el payload en el parámetro o en el body; asegúrate de **URL-encodear** `'`, ` `, `&`, `?` en query strings (o `Ctrl+U` en Repeater). El tab **Inspector/Decoded** te muestra el valor decodificado para tus repeticiones. |
+| Path traversal | `Repeater`: edita `filename` a `../../etc/passwd`; si Burp te "limpia" el `..`, desactiva en *Project options → HTTP* los presets de normalización, o encoder `..%2f`. |
+| Cookies / flags de seguridad | `HTTP history` (o `Repeater`) → mira el `Set-Cookie: jwt_token=...` y comprueba que falta `HttpOnly`/`Secure`. |
+| JWT (forjar/replay) | `Repeater`: usa `Decoder` u `Inspector` para base64url-decodificar las 3 partes del JWT y ver los claims; forja un HS256 con jwt.io (mismo secret) y pega el resultado en el header `Authorization`. Para replay: reenvía `Repeater` el mismo Bearer/id_token. |
+| OAuth/OIDC (web) | Con el navegador proxyado: **intercepta** los pasos `authorize`/`approve`/`token` (`Proxy → Intercept on`) y modifica `scope`, `redirect_uri`, etc. en caliente. Guarda los `id_token` de `HTTP history` para el replay. |
+| Race condition | `Intruder` (o la extensión Turbo Intruder si la instalas) dispara peticiones concurrentes a `transfer-username` — en este lab SQLite+sync lo vuelve *no fiable* (se documenta en R23). |
+| DoS / resource consumption | `Repeater`: un solo `GET /api/stream/product-feed?count=100000` y observa el flujo SSE hasta cerrar el socket. |
+
+### 7.3 Limitaciones de Community Edition (qué NO podrás hacer)
+
+- **No guarda proyectos** (cierra y pierdes el tablero/requests) → guarda el texto crudo de tus payloads importantes en un `.txt`.
+- **Intruder** sin *settings* avanzados y limitado a ~1 petición/seg (no es problema aquí; los retos no exigen alta velocidad).
+- **Sin escáner activo** → todo el trabajo es manual con Repeater/Intruder (justo lo que pide un red team).
+- Para baja el modo `Intercept` y deja pasar el tráfico de la UI del lab mientras navegas.
+
+### 7.4 Flujo de trabajo sugerido por laboratorio
+
+| Lab | Enfoque Burp |
+|---|---|
+| Lab 1 | `HTTP history` para reconocer (`/api/docs`, `/apispec.json`) + `Repeater` para auth/JWT + `Intruder` para brute force. |
+| Lab 2 | `Repeater` puro: mutar IDs (BOLA), campos JSON (mass assignment) y endpoints públicos (BFLA). |
+| Lab 3 | `Repeater` para inyecciones (SQLi, cmd, path traversal, GraphQL) con el payload adecuado encodido; `Intercept` para manipular uploads multipart. |
+| Lab 4 | `Intercept` sobre el flujo OAuth/OIDC + `Repeater` para lógica de precios/transferencias/rate limit + `Intruder` para concurrencia. |

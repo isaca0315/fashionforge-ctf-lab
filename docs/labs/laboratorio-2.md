@@ -22,6 +22,8 @@
 
 **Recordatorio de IDs/credenciales**: `admin`(1), `john`(2), `jim`(3), `superadmin`(4). Productos 1–4.
 
+> **¿Prefieres Burp Suite?** Todo este lab es **Repeater puro**: cambiar IDs en URLs, añadir campos al JSON y llamar a endpoints de admin públicos. Navegador proxyado a `127.0.0.1:8080`; config y límites en el **Anexo 7** del `README.md`.
+
 ---
 
 ## R07 — BOLA: leer detalles de orden ajena
@@ -49,6 +51,8 @@
 
 **Flag**: `FH{bola-order-details}`
 
+> **Con Burp**: captura `GET /api/orders/1/details` con tu token → `Send to Repeater` y cambia el `{id}` por 2, 3, ... (IDs secuenciales).
+
 **Remediación**: autorización server-side por recurso: `if order.user_id != current_user.id: 403`.
 
 ---
@@ -69,6 +73,8 @@ curl -s http://localhost:5000/api/products/4/owner-info
 **Prueba de éxito**: `{"product_id":1,"name":"Classic Tee","owner_id":2,"owner_email":"john@example.com",...}` — endpoint **público**.
 
 **Flag**: `FH{idor-owner-info}`
+
+> **Con Burp**: es un `GET` **público** — en `Repeater` cambia `/api/products/1/owner-info` → `/2`, `/3`, `/4` y recoge owner_id/owner_email sin autenticar.
 
 **Remediación**: requerir autenticación + control de acceso; no exponer emails de terceros.
 
@@ -96,6 +102,8 @@ curl -s -X POST http://localhost:5000/api/auth/register \
 **Prueba de éxito**: la fila de `pwn` muestra `is_admin: true` y `balance: 999999.0`. (Alternativa web: formulario `/register` con los mismos campos en form-data.)
 
 **Flag**: `FH{mass-assignment-register}`
+
+> **Con Burp**: en `Repeater` añade campos extra al body JSON del `register` (`"is_admin": true`, `"balance": 999999`). En la pestaña de `POST /register` del navegador usa form-data. Confirma con el `POST /graphql/query` (público) en `Repeater`.
 
 **Remediación**: whitelist estricta de campos permitidos (p.ej. `only=["username","password","email"]`); el rol y el balance los setea el servidor.
 
@@ -134,6 +142,8 @@ curl -s -X POST http://localhost:5000/api/auth/register \
 **Flag**: `FH{bfla-promote-admin}`
 **Flag (extra)**: `FH{bfla-delete-user}`
 
+> **Con Burp**: `POST /api/admin/promote` **sin token** — pásalo a `Repeater` tal cual y cambia el `username`. Para el borrado, captura el `DELETE /api/secure/delete-user/<id>` con el Bearer de un no-admin.
+
 **Remediación**: enforce de roles vía decorador (`@admin_required`) en *cada* endpoint administrativo; minimizar superficie administrativa.
 
 ---
@@ -163,6 +173,8 @@ curl -s -X POST http://localhost:5000/api/auth/register \
 
 **Flag**: `FH{idor-transfer-ownership}`
 
+> **Con Burp**: `POST /api/products/<id>/transfer-ownership` es **público** — `Repeater` con el body `{"username":"attacker"}` y el ID que quieras; verifica el cambio en `owner-info`.
+
 **Remediación**: validar `product.owner_id == current_user.id` (o rol admin) y un consentimiento explícito del nuevo dueño.
 
 ---
@@ -182,9 +194,11 @@ curl -s -X POST http://localhost:5000/api/auth/register \
    ```
 2. Mira cómo el comprador original recupera el dinero y el producto vuelve a estar disponible.
 
-**Prueba de éxito**: `{"message":"Order status updated"}` y, en la BD, el balance del comprador sube + `is_available=True` del producto (lógica en app.py:652-663).
+**Prueba de éxito**: `{"message":"Order status updated"}` y, en la BD, el balance del comprador sube + `is_available=True` del producto (lógica en app.py:653-663).
 
 **Flag**: `FH{bola-order-refund}`
+
+> **Con Burp**: `PUT /api/orders/<id>/status` público con body `{"status":"refunded"}` en `Repeater`; repite para varios IDs y observa el balance del comprador en `GET /api/users/<id>`.
 
 **Remediación**: validar propiedad/rol; el reembolso debe ser una acción de negocio auditada y con transición de estados válida, no un `PUT` libre.
 

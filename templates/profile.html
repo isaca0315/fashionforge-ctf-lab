@@ -15,7 +15,7 @@
                 <div class="form-group">
                     <label class="form-label">Username</label>
                     <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
-                    <small class="form-text" style="color: #64748b;">Username cannot be changed</small>
+                    <small class="form-text" style="color: #94a3b8;">Username cannot be changed</small>
                 </div>
                 
                 <div class="form-group">
@@ -53,11 +53,11 @@
             <h3><i class="fas fa-shield-alt"></i> Account Security</h3>
         </div>
         <div class="card-body">
-            <div style="padding: 1rem; background: #f0f9ff; border-radius: 0.5rem; margin-bottom: 1.5rem;">
-                <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb; text-align: center;">
+            <div style="padding: 1rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 0.75rem; margin-bottom: 1.5rem;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: #10b981; text-align: center;">
                     ${{ "%.2f"|format(current_user.balance) }}
                 </div>
-                <div style="text-align: center; color: #64748b; font-size: 0.875rem;">Account Balance</div>
+                <div style="text-align: center; color: #94a3b8; font-size: 0.875rem;">Account Balance</div>
             </div>
 
             <form id="passwordForm">

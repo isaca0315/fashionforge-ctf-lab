@@ -310,11 +310,13 @@ function showAlert(message, type) {
     font-weight: 600;
 }
 .badge-success { background-color: #10b981; color: white; }
-.badge-danger { background-color: #ef4444; color: white; }
+.badge-danger { background-color: #f43f5e; color: white; }
 .badge-secondary { background-color: #64748b; color: white; }
-.card-header.bg-danger { border-bottom: 3px solid #dc3545; }
-.card-header.bg-warning { border-bottom: 3px solid #ffc107; }
-.card-header.bg-info { border-bottom: 3px solid #17a2b8; }
+.card-header.bg-danger { background: rgba(244, 63, 94, 0.15); border: none; border-left: 4px solid #f43f5e; border-radius: 1rem 1rem 0 0; }
+.card-header.bg-warning { background: rgba(245, 158, 11, 0.15); border: none; border-left: 4px solid #f59e0b; border-radius: 1rem 1rem 0 0; }
+.card-header.bg-info { background: rgba(56, 189, 248, 0.15); border: none; border-left: 4px solid #38bdf8; border-radius: 1rem 1rem 0 0; }
+.btn-info { background: linear-gradient(135deg, #38bdf8, #0284c7); color: white; }
+.btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
 .quick-promote, .quick-owner, .quick-order, .quick-transfer {
     font-size: 0.7em;
     padding: 0.15em 0.4em;

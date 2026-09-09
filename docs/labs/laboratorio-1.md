@@ -28,7 +28,9 @@
 docker compose up -d        # api en :5000, oauth en :5001
 ```
 
-Alertas de salud: `api-server` debe quedar healthy; `oauth-server` puede quedar *unhealthy* porque el healthcheck del Dockerfile apunta a `localhost:5000` dentro de su propio contenedor (el oauth escucha en 5001). **No es un fallo** — el oauth sigue funcionando.
+Alertas de salud: `lab-api-server` debe quedar healthy; `lab-oauth-server` puede quedar *unhealthy* porque el healthcheck del Dockerfile apunta a `localhost:5000` dentro de su propio contenedor (el oauth escucha en 5001). **No es un fallo** — el oauth sigue funcionando.
+
+> **¿Prefieres Burp Suite?** Este lab se puede hacer integro con **Burp Suite Community Edition**: navegador proxyado a `127.0.0.1:8080` + `Repeater` para modificar peticiones y `Intruder` para fuerza bruta. Configuración, límites y receta por tipo de reto: ver **Anexo 7** del `README.md`. Cada reto incluye una línea `Con Burp`.
 
 ---
 
@@ -45,16 +47,16 @@ Alertas de salud: `api-server` debe quedar healthy; `oauth-server` puede quedar 
    curl -s http://localhost:5000/api/docs        # UI interactiva Swagger
    curl -s http://localhost:5000/apispec.json    # spec OpenAPI completa
    ```
-2. Desde el spec, cuenta los endpoints y extrae los que **no** requieran autenticación:
+2. Desde el spec, cuéntalos y extrae la lista de endpoints:
    ```bash
-   curl -s http://localhost:5000/apispec.json | jq -r '
-     .paths | to_entries[] | .key as $p |
-     .value | keys[] | select(. $value=="security") | empty
-   ' 2>/dev/null
+   curl -s http://localhost:5000/apispec.json | jq -r '.paths | keys[]'
+   curl -s http://localhost:5000/apispec.json | jq '.paths | keys | length'   # 42 paths documentados
    ```
 3. Busca en el spec los tags `FashionForge`, `Admin`, `Debug`, `Network` (áreas de interés para el pentest).
 
-**Prueba de éxito**: `/apispec.json` devuelve JSON con `paths.*` (42 paths en el lab). Respuesta con elemento `"title": "FashionForge API"`.
+**Prueba de éxito**: `/apispec.json` devuelve JSON con `paths.*` (42 paths documentadas en el lab; la app define más rutas, pero flasgger solo expone las que tienen docstring). Respuesta con elemento `"title": "FashionForge API"`.
+
+> **Con Burp**: navega a `/api/docs` y `/apispec.json` con el proxy on; en `HTTP history` filtra por `localhost:5000` y agrupa por método/URL para inventariar. `GET /apispec.json` → `Send to Repeater` para explorar el JSON crudo.
 
 ---
 
@@ -92,6 +94,8 @@ Alertas de salud: `api-server` debe quedar healthy; `oauth-server` puede quedar 
 
 **Flag**: `FH{default-creds-admin}`
 
+> **Con Burp**: captura `POST /api/auth/login` (`Send to Repeater`), cambia credenciales/body y comprueba el `access_token`. Para la fuerza bruta: `Intruder`, modo **Sniper**, posición única en `"password":"wrong§1§"` con lista de 50-100 candidatos (Community a ~1 req/s, suficiente para ver el rate limit por-worker). `POST /api/auth/basic-login` sin rate limit: `Repeater` reenviando el `Authorization: Basic ...` las veces que quieras.
+
 **Remediación**: eliminar credenciales seed en producción, forzar cambio de contraseña inicial, rate limiting robusto por IP + cuenta con backoff.
 
 ---
@@ -118,6 +122,8 @@ Alertas de salud: `api-server` debe quedar healthy; `oauth-server` puede quedar 
 En el navegador: `console.log(document.cookie)` muestra `jwt_token`.
 
 **Flag**: `FH{httponly-missing-jwt-cookie}`
+
+> **Con Burp**: tras el login web, en `HTTP history` busca la respuesta de `POST /login` y mira `Set-Cookie: jwt_token=...`: falta `HttpOnly` y `Secure`. En el navegador proxyado, `console.log(document.cookie)` desde las DevTools lo confirma.
 
 **Remediación**: `HttpOnly`/`Secure`/`SameSite=Strict` y delegar el manejo de tokens a un almacén seguro no accesible a JS.
 
@@ -151,6 +157,8 @@ En el navegador: `console.log(document.cookie)` muestra `jwt_token`.
 **Prueba de éxito**: tras `logout`, `GET /api/secure/users/me` sigue respondiendo 200 con el perfil de john; `refresh-token` devuelve un nuevo `access_token`.
 
 **Flag**: `FH{logout-no-revoke}`
+
+> **Con Burp**: guarda el `Authorization: Bearer ...` del login en `Repeater`; llama a `POST /api/auth/logout` (sin token) y **reenvía** la petición del perfil con el mismo Bearer → sigue 200. `Send to Repeater` sin modificar = "replay" del token, aquí también con `refresh-token`.
 
 **Remediación**: denylist/revocación de tokens + rotación con `jti` y `iat`; short TTL y refresh con comprobación.
 
@@ -196,6 +204,8 @@ En el navegador: `console.log(document.cookie)` muestra `jwt_token`.
 
 **Flag**: `FH{forged-jwt-admin}`
 
+> **Con Burp**: usa `Decoder` para base64url-decodificar las 3 partes del JWT robado (`oauth/jwks` → el secret). Forja el HS256 en jwt.io (mismo secret, `sub=1`, `admin:true`) y en `Repeater` pega el token nuevo en `Authorization: Bearer` → `GET /api/secure/users/me` responde el perfil de admin.
+
 **Remediación**: sin secrets por defecto/fallback, rotación vía env, verificar `iss`/`aud`, y no exponer nunca una clave de firma en un endpoint público (JWKS).
 
 ---
@@ -231,6 +241,8 @@ En el navegador: `console.log(document.cookie)` muestra `jwt_token`.
 
 **Flag**: `FH{prompt-injection-balance}`
 
+> **Con Burp**: en `Repeater`, edita el body JSON con distintos `user_instructions` y comprueba `command_executed: true`; luego `GET /api/users/1` para ver el balance modificado. El patrón `update %s balance %s` se detecta en el texto libre.
+
 **Remediación**: tratar la salida/órdenes del modelo como datos no confiables; separar el plano de "instrucciones de negocio" ejecutables del chat libre; validación humana para cambios financieros; no usar la misma pipeline para generación de texto y mutaciones.
 
 ---
@@ -239,7 +251,7 @@ En el navegador: `console.log(document.cookie)` muestra `jwt_token`.
 
 | Reto | Flag |
 |---|---|
-| R01 | (reconocimiento — 42 paths, `FashionForge API`) |
+| R01 | (reconocimiento — 42 paths documentados, `FashionForge API`) |
 | R02 | `FH{default-creds-admin}` |
 | R03 | `FH{httponly-missing-jwt-cookie}` |
 | R04 | `FH{logout-no-revoke}` |

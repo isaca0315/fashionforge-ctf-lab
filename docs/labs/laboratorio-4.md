@@ -23,6 +23,8 @@
 4. Forzar **resource consumption** / bypass del rate limit (API4).
 5. Encadenar vulnerabilidades (p. ej. Mass Assignment + BOLA → admin total).
 
+> **¿Prefieres Burp Suite?** Este lab mezcla **Repeater** (lógica de precios, transferencias, rate limit) con **Intercept** (flujo OAuth/OIDC en el navegador proxyado) e **Intruder** (concurrencia/rate). Config y límites de Community en el **Anexo 7** del `README.md`.
+
 ---
 
 ## R20 — Manipulación de precio en la compra
@@ -64,6 +66,8 @@
 
 **Flag**: `FH{price-tampering}`
 
+> **Con Burp**: captura el `POST /api/products/<id>/purchase` desde la UI (comprando un producto) → `Repeater`; cambia el body a `{"discount_code":"SAVE99"}`, `{"price_override":0.01}` o `{"special_offer":true}` y observa `actual_price` vs `paid_amount`.
+
 **Remediación**: precio fijado en servidor sin inputs de precio/descuento del cliente; validar códigos contra tabla y por usuario; registrar el flujo completo de negocio.
 
 ---
@@ -87,6 +91,8 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
 > Bonus: el gemelo `/api/stream/product-updates` (app.py:1174) falla con **500** — lee `request.args` *dentro* del generador y pierde el request context de Flask (`RuntimeError: Working outside of request context`). El que funciona es `/api/stream/product-feed`, que lee `count` antes de generar.
 
 **Flag**: `FH{stream-dos}`
+
+> **Con Burp**: un solo `GET /api/stream/product-feed?count=100000` en `Repeater`; el stream SSE empieza a descargar sin límite (puedes cerrar la pestaña cuando veas miles de líneas). El gemelo `/product-updates?count=10` da **500**.
 
 **Remediación**: acotar `count`, reforzar con logging y rate limiting.
 
@@ -117,11 +123,13 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
    for i in $(seq 1 20); do curl -s -o /dev/null -w "%{http_code} " \
      http://localhost:5000/api/products -H "Authorization: Bearer $JWT"; done; echo
    ```
-3. **Nota**: el code usa `request.remote_addr` (no `X-Forwarded-For`), así que rotar XFF **no** bypasea aquí; la debilidad real es el contador in-memory por-proceso (gunicorn `--workers 4`) + ventana corta reseteable. El `/api/products` duplicado registrado luego (app.py:2233) queda *ensombrecido* por el primero (Flask usa el primero), así que no hay una segunda ruta para bypassear — el medio es siempre el reset de 60s y el reparto multi-worker.
+3. **Nota**: el code usa `request.remote_addr` (no `X-Forwarded-For`), así que rotar XFF **no** bypasea aquí; la debilidad real es el contador in-memory por-proceso (gunicorn `--workers 4`) + ventana corta reseteable. El `/api/products` duplicado registrado luego (app.py:2234) queda *ensombrecido* por el primero (Flask usa el primero), así que no hay una segunda ruta para bypassear — el medio es siempre el reset de 60s y el reparto multi-worker.
 
 **Prueba de éxito**: tras el paso 1 ves 429s; tras `sleep 61` vuelves a obtener 200s — tasa sostenida muy superior a 5/min.
 
 **Flag**: `FH{rate-limit-bypass}`
+
+> **Con Burp**: manda `GET /api/products` a `Intruder` (modo **Sniper**, una posición vacía o un payload dummy) y repite ~20 veces; verás 200/429 alternados (contador por-worker). Tras ~60s los contadores se resetean y vuelves a tener 200s.
 
 **Remediación**: rate limit server-side persistente (Redis) y por IP real de confianza + cuenta; sin confiar en memoria por-proceso.
 
@@ -134,7 +142,7 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
 
 **Objetivo**: mover fondos desde una cuenta que **no** es la tuya indicando simplemente el `username` de origen en el body.
 
-> El endpoint `POST /api/payments/transfer-username` (app.py:670) usa el `username` del body **como origen** (`source_user = User.query.filter_by(username=data['username'])`); la identidad del JWT solo se usa si no mandas `username`. Además el flujo hace `time.sleep(random 0–0.05)` entre leer y escribir el balance sin locking (app.py:812) — race teórico. Con **SQLite + gunicorn sync**, las escrituras se serializan (usa `--workers 4` de 1 request c/u), así que el doble-gasto NO es fiable aquí; la explotación práctica es el spoofing de origen.
+> El endpoint `POST /api/payments/transfer-username` (app.py:671) usa el `username` del body **como origen** (`source_user = User.query.filter_by(username=data['username'])`); la identidad del JWT solo se usa si no mandas `username`. Además el flujo hace `time.sleep(random 0–0.05)` entre leer y escribir el balance sin locking (app.py:745) — race teórico. Con **SQLite + gunicorn sync**, las escrituras se serializan (usa `--workers 4` de 1 request c/u), así que el doble-gasto NO es fiable aquí; la explotación práctica es el spoofing de origen.
 
 **Pasos**
 1. Saca el balance de john y jim (flat, sin auth, GraphQL):
@@ -159,6 +167,8 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
 
 **Flag**: `FH{race-condition-transfer}`
 
+> **Con Burp**: en `Repeater` edita el body y mastica `source_username` a una cuenta ajena (`superadmin`) → `Repeater` (o `Intruder` con varias peticiones) para intentar la race; la respuesta de éxito mueve fondos desde el `username` que mandas sin verificar tu identidad. Recuerda: SQLite+sync NO permite el doble gasto real.
+
 **Remediación**: el origen debe derivar SIEMPRE del token del autenticado (o requerir re-autenticación/OTP); transacción atómica con `SELECT ... FOR UPDATE` y auditoría.
 
 ---
@@ -180,6 +190,8 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
 **Prueba de éxito**: el JSON expone el secret en claro.
 
 **Flag**: `FH{oauth-jwks-secret-leak}`
+
+> **Con Burp**: para la fuga, `GET http://localhost:5001/oauth/jwks` en `Repeater` muestra el secret en `keys[0].payload`. Para la escalada por scope, con el navegador proxyado **intercepta** los pasos `authorize`/`approve`/`token` y cambia `scope` a `openid admin`; el `id_token` emitido tendrá `sub:1` y `email:admin@vuln.internal` pese a loguear como john.
 
 **Pasos (escalada por scope)**
 2. Completa el flujo OAuth Authorization Code con PKCE pidiendo **`scope=openid admin`**. El servidor, al ver `admin` en el scope, **suplanta al primer admin** del sistema sin importar con qué cuenta te hayas logueado (oauth_server.py:742-759):
@@ -246,6 +258,8 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
 
 **Flag**: `FH{oidc-token-replay}` · `FH{oidc-forged-idtoken}`
 
+> **Con Burp**: guarda el `id_token` de `HTTP history` y reenvíalo dos veces a `POST /api/auth/oauth-id-token-login` (replay: las dos dan access_token). Para el forjado, base64url-decodifica con `Decoder`, forja en jwt.io el HS256 con el secret filtrado (`iss=http://oauth:5001`, `aud=auto_client`, `email=admin@vuln.internal`) y pega el token en `Repeater`.
+
 **Remediación**: validar `nonce` (emitido por el RP en `authorize`), comprobar `auth_time`/`iat`, denylist de `jti` reutilizados, y firmar con claves asimétricas cuyo privado nunca se filtre.
 
 ---
@@ -285,6 +299,8 @@ curl -s "http://localhost:5000/api/stream/product-feed?count=100000" \
 **Prueba de éxito**: eres admin en `/api/secure/users/me`, controlas productos ajenos y has alterado balances via R06/R20 sin credenciales previas.
 
 **Flag**: `FH{full-chain-admin}`
+
+> **Con Burp**: combina los retos previos: `Repeater` para el registro con mass assignment y para promover/transferir/`price_override`; `Decoder`+jwt.io para el JWT forjado; y `Repeater` para cerrar la cadena con `transfer-username`/`chatbot` hasta ser admin total.
 
 ---
 

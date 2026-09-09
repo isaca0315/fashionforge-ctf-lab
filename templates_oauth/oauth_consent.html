@@ -6,29 +6,29 @@
   <title>Authorize Application</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .container { max-width: 600px; width: 100%; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; color: white; text-align: center; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e1b2e 50%, #0f172a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #e2e8f0; }
+    .container { max-width: 600px; width: 100%; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden; }
+    .header { background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(56, 189, 248, 0.3)); backdrop-filter: blur(10px); padding: 2rem; color: white; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
     .header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
     .content { padding: 2rem; }
     .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; color: #333; }
-    .form-group input, .form-group textarea { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem; transition: border-color 0.3s; }
-    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #667eea; }
-    .scopes-list { background: #f9f9f9; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
-    .scopes-list p { font-size: 0.9rem; color: #666; margin-bottom: 0.5rem; }
+    .form-group label { display: block; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; color: #e2e8f0; }
+    .form-group input, .form-group textarea { width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 0.95rem; color: #e2e8f0; transition: border-color 0.3s; }
+    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+    .scopes-list { background: rgba(255, 255, 255, 0.03); padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    .scopes-list p { font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem; }
     .scopes-list ul { list-style: none; padding-left: 1rem; }
-    .scopes-list li { font-size: 0.9rem; color: #666; margin-bottom: 0.3rem; }
-    .scopes-list li:before { content: " "; color: #667eea; font-weight: bold; }
-    .error-message { background: #fee; color: #c33; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; border-left: 4px solid #c33; }
+    .scopes-list li { font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.3rem; }
+    .scopes-list li:before { content: " "; color: #10b981; font-weight: bold; }
+    .error-message { background: rgba(244, 63, 94, 0.1); color: #fb7185; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #f43f5e; }
     .button-group { display: flex; gap: 1rem; margin-top: 2rem; }
-    button, a.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 4px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; text-align: center; }
-    .btn-primary { background: #667eea; color: white; flex: 1; }
-    .btn-primary:hover { background: #5568d3; }
-    .btn-secondary { background: #e0e0e0; color: #333; flex: 1; }
-    .btn-secondary:hover { background: #d0d0d0; }
-    .info-box { background: #f0f7ff; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; border-left: 4px solid #667eea; }
-    .info-box p { color: #0366d6; font-size: 0.9rem; margin: 0; }
+    button, a.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; text-align: center; }
+    .btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: white; flex: 1; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+    .btn-primary:hover { background: linear-gradient(135deg, #059669, #047857); }
+    .btn-secondary { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; flex: 1; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .btn-secondary:hover { background: rgba(148, 163, 184, 0.3); }
+    .info-box { background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #10b981; }
+    .info-box p { color: #34d399; font-size: 0.9rem; margin: 0; }
   </style>
 </head>
 <body>
@@ -80,7 +80,7 @@
         </div>
       </form>
 
-      <p style="text-align: center; margin-top: 2rem; color: #999; font-size: 0.85rem;">
+      <p style="text-align: center; margin-top: 2rem; color: #94a3b8; font-size: 0.85rem;">
         Your credentials are securely transmitted. Never share your password.
       </p>
 

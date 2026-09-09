@@ -31,7 +31,7 @@
                 <div class="form-group">
                     <label class="form-label">File Preview</label>
                     <div id="imagePreview" style="border: 2px dashed #ddd; padding: 1rem; text-align: center; min-height: 100px; display: flex; align-items: center; justify-content: center;">
-                        <span style="color: #64748b;">Preview will appear here</span>
+                        <span style="color: #94a3b8;">Preview will appear here</span>
                     </div>
                 </div>
                 
@@ -125,7 +125,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
             } else {
                 preview.innerHTML = `
                     <div style="text-align: center;">
-                        <i class="fas fa-file" style="font-size: 3rem; color: #64748b;"></i>
+                        <i class="fas fa-file" style="font-size: 3rem; color: #94a3b8;"></i>
                         <div style="margin-top: 0.5rem;">
                             <strong>${file.name}</strong><br>
                             <small>Type: ${file.type || 'Unknown'}</small><br>
@@ -137,7 +137,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         };
         reader.readAsDataURL(file);
     } else {
-        preview.innerHTML = '<span style="color: #64748b;">Preview will appear here</span>';
+        preview.innerHTML = '<span style="color: #94a3b8;">Preview will appear here</span>';
     }
 });
 
@@ -213,15 +213,15 @@ document.getElementById('exportForm').addEventListener('submit', function(e) {
 }
 
 .text-muted {
-    color: #64748b !important;
+    color: #94a3b8 !important;
 }
 
 code {
-    background: #f1f5f9;
+    background: rgba(255, 255, 255, 0.08);
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     font-family: 'Courier New', monospace;
-    color: #475569;
+    color: #e2e8f0;
 }
 
 .btn-sm {
@@ -234,9 +234,9 @@ code {
 }
 
 .alert-warning {
-    background-color: #fff3cd;
-    border-color: #ffeaa7;
-    color: #856404;
+    background-color: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
 }
 </style>
 {% endblock %}

