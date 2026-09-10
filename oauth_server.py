@@ -1027,5 +1027,9 @@ except Exception as e:
     import logging
     logging.error(f"Database initialization error: {e}", exc_info=True)
 
+# Flag de reto en la respuesta (ver flags.py)
+from flags import apply as flags_apply_hook
+app.after_request(flags_apply_hook)
+
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5001)

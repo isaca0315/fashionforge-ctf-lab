@@ -24,6 +24,8 @@
 
 > **¿Prefieres Burp Suite?** Todo este lab es **Repeater puro**: cambiar IDs en URLs, añadir campos al JSON y llamar a endpoints de admin públicos. Navegador proxyado a `127.0.0.1:8080`; config y límites en el **Anexo 7** del `README.md`.
 
+> **¿Dónde está la flag?** Al completar un reto, la bandera ya viene **en la propia respuesta HTTP**: respuestas JSON con los campos `flag` (única) y `flags` (lista); respuestas no-JSON (HTML/archivos/redirects) con la cabecera `X-Flag`/`X-Flags`. Detalle en la sección 4 del `README.md`.
+
 ---
 
 ## R07 — BOLA: leer detalles de orden ajena

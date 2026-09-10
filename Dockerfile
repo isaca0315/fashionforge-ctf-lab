@@ -21,6 +21,7 @@ COPY config.py .
 COPY models.py .
 COPY jwt_utils.py .
 COPY jwt_custom.py .
+COPY flags.py .
 COPY templates/ ./templates/
 COPY static/ ./static/
 COPY oauth_server.py ./

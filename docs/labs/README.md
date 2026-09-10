@@ -1,6 +1,6 @@
 # FashionForge CTF Lab — OWASP API Top 10 (2023) con enfoque red team
 
-Laboratorio **red team** de seguridad de APIs basado en **FashionForge**, una plataforma de e-commerce de moda deliberadamente vulnerable. El objetivo es entrenar **OWASP API Security Top 10 (2023)** practicando **técnicas ofensivas reales** (reconocimiento, BOLA/IDOR, mass assignment, BFLA, SQLi/RCE, GraphQL, OAuth/OIDC, prompt injection) a lo largo de **4 laboratorios** red team, con retos CTF documentados y web de flags.
+Laboratorio **red team** de seguridad de APIs basado en **FashionForge**, una plataforma de e-commerce de moda deliberadamente vulnerable. El objetivo es entrenar **OWASP API Security Top 10 (2023)** practicando **técnicas ofensivas reales** (reconocimiento, BOLA/IDOR, mass assignment, BFLA, SQLi/RCE, GraphQL, OAuth/OIDC, prompt injection) a lo largo de **4 laboratorios** red team, con retos CTF documentados cuyas **flags se entregan en la propia respuesta HTTP**.
 
 > **Filosofía red team**: cada laboratorio simula una fase del ciclo de un penetration test (`recon → explotación → escalada → encadenado`). Se asume mindset ofensivo: primero descubrir superficie, luego vulnerabilidades, y finalmente construir la cadena de explotación. Todo lo documentado se probó y verificó en vivo contra el objetivo corriendo.
 
@@ -197,6 +197,17 @@ Ejemplo: `FH{sqli-users-search}`. Para cada reto se indica:
 - **Prueba de éxito** (respuesta esperada)
 - **Flag**
 - **Remediación** real (cómo se arregla en producción)
+
+### ¿Cómo se entrega la flag?
+
+Las flags van **en la propia respuesta HTTP** cuando el reto se consigue (módulo `flags.py` registrado como *after-request* en `app.py` y `oauth_server.py`):
+
+| Tipo de respuesta | Dónde aparece la flag |
+|---|---|
+| JSON | campos `flag` (flag única) y `flags` (lista de flags conseguidas en esa respuesta), añadidos al final del payload |
+| No JSON (HTML, SSE, archivo, redirect) | cabeceras `X-Flag` (única) y `X-Flags` (lista) |
+
+> Los retos con **estado secuencial** requieren completar la secuencia completa: R22 (ver un `429` y luego un `200` tras la ventana del rate limit), R25 replay (reenviar el **mismo** `id_token` dos veces) y R26 (escalar primero a admin por mass assignment/BFLA y luego usar ese token). El detector está compartido entre los 4 workers de gunicorn y **nunca rompe el lab** por un fallo suyo.
 
 > Los payloads de esta guía fueron **ejecutados y verificados** contra el lab corriendo. Si un paso no responde igual, revisa el estado del entorno (cuentas compradas por las que el producto ya no esté disponible, balance cambiado, etc.) o resetéalo con el comando de la sección 2.
 

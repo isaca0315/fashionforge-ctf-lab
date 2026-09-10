@@ -30,6 +30,8 @@ docker compose up -d        # api en :5000, oauth en :5001
 
 Alertas de salud: `lab-api-server` debe quedar healthy; `lab-oauth-server` puede quedar *unhealthy* porque el healthcheck del Dockerfile apunta a `localhost:5000` dentro de su propio contenedor (el oauth escucha en 5001). **No es un fallo** — el oauth sigue funcionando.
 
+> **¿Dónde está la flag?** Al completar un reto, la bandera ya viene **en la propia respuesta HTTP**: respuestas JSON con los campos `flag` (única) y `flags` (lista); respuestas no-JSON (HTML/SSE/archivos/redirects) con la cabecera `X-Flag`/`X-Flags`. Detalle en la sección 4 del `README.md`.
+
 > **¿Prefieres Burp Suite?** Este lab se puede hacer integro con **Burp Suite Community Edition**: navegador proxyado a `127.0.0.1:8080` + `Repeater` para modificar peticiones y `Intruder` para fuerza bruta. Configuración, límites y receta por tipo de reto: ver **Anexo 7** del `README.md`. Cada reto incluye una línea `Con Burp`.
 
 ---

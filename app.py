@@ -31,6 +31,7 @@ from graphql_vuln import graphql_blueprint
 from oauth_server import OAUTH_CLIENTS
 from urllib.parse import parse_qs
 from flask_session import Session  
+from flags import apply as flags_apply_hook  
 
 
 def response_from_ai(user_input: str) -> str:
@@ -3553,6 +3554,9 @@ def purchase_product(product_id):
 # -------------------------------------------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------------------------------------------
+
+# Flag de reto en la respuesta (ver flags.py)
+app.after_request(flags_apply_hook)
 
 def init_db():
     with app.app_context():
